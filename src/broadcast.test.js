@@ -5,7 +5,7 @@
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
 
-import Broadcast from './broadcast';
+import { Broadcast } from './broadcast';
 
 class Peer extends EventEmitter {
   constructor () {

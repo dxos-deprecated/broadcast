@@ -20,7 +20,7 @@ const msgId = (seqno, from) => {
   return `${seqno.toString('hex')}:${from.toString('hex')}`;
 };
 
-class Broadcast extends EventEmitter {
+export class Broadcast extends EventEmitter {
   constructor (opts = {}) {
     super();
 
@@ -161,5 +161,3 @@ class Broadcast extends EventEmitter {
     }
   }
 }
-
-export default Broadcast;
