@@ -71,7 +71,7 @@ const middleware = {
     node.send(packet);
   },
   subscribe: (onPacket) => {
-    // Defines how to process incomming packets.
+    // Defines how to process incoming packets.
 
     // e.g. Using websockets
 
@@ -104,6 +104,35 @@ You can check a real example in: [example](https://github.com/dxos/broadcast/tre
 ## API
 
 #### `const broadcast = new Broadcast(middleware, [options])`
+
+- `middleware`: The middleware defines an interface to connect the broadcast to any request/response solution.
+  - `lookup: () => Promise<Array<Peer>>`: Runs a lookup to get the ids of your peers neighboors.
+    - `Peer: { id: Buffer, ...props }`
+  - `send: (packet: Buffer, peer: Object) => Promise`: Defines how to send the packet builded by the broadcast.
+  - `subscribe: (onPacket) => unsubscribeFunction`: Defines how to subscribe to incoming packets.
+    - `onPacket: (data: Buffer) => boolean`: Callback to process incoming data. It returns true if the broadcast could decode the message or false if not.
+    - `unsubscribeFunction: Function`: Defines a way to unsubscribe from listening messages if the broadcast stop working. Helpful if you are working with streams and event emitters.
+
+- `options`
+  - `id: Buffer`: Defines an id for the current peer. Default: `crypto.randomBytes(32)`.
+  - `maxAge: number`: Defines the max live time for the cache messages. Default: `10 * 1000`.
+  - `maxSize: number`: Defines the max size for the cache messages. Default: `100`.
+
+#### `broadcast.run()`
+
+Initialize the cache and runs the defined subscription.
+
+#### `broadcast.stop()`
+
+Clear the cache and unsubscribe from incoming messages.
+
+#### `broadcast.publish(data, [options])`
+
+Broadcast a flooding message to the peers neighboors.
+
+- `data: Buffer`: Any data that you want to broadcast.
+- `options`
+  - `seqno: Buffer`: Defines a custom seqno for the message. Default: `crypto.randomBytes(32)`.
 
 ## Contributing
 

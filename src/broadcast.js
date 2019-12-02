@@ -152,9 +152,10 @@ export class Broadcast extends EventEmitter {
 
       this._publish(packet).catch(() => {});
 
-      return packet;
+      return true;
     } catch (err) {
       this.emit('subscribe-error', err);
+      return false;
     }
   }
 }
