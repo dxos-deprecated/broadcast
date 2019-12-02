@@ -85,9 +85,8 @@ const middleware = {
   }
 };
 
-const broadcast = new Broadcast({
+const broadcast = new Broadcast(middleware, {
   id: crypto.randomBytes(32),
-  middleware,
   maxAge: 10 * 1000, // Timeout for each message in the LRU cache.
   maxSize: 200 // Limit of messages in the LRU cache.
 })
@@ -100,48 +99,11 @@ broadcast.publish(Buffer.from('Hello everyone'))
 broadcast.stop()
 ```
 
+You can check a real example in: [example](https://github.com/dxos/broadcast/tree/master/example)
+
 ## API
 
-#### `const feedStore = await feedStore.create(storage, [options])`
-
-Creates and initializes a new FeedStore.
-
-- `storage: RandomAccessStorage`: Storage used by the feeds to store their data.
-- `options`:
-  - `database: Hypertrie`: Defines a custom hypertrie database to index the feeds.
-  - `feedOptions: Object`: Default hypercore options for each feed.
-  - `codecs: Object`: Defines a list of available codecs to work with the feeds.
-  - `timeout: number`: Defines the time (ms) to wait for open or close a feed. Default: `10 * 1000`.
-  - `hypercore: Hypercore`: Defines the Hypercore class to create feeds.
-
-#### `const feedStore = new FeedStore(storage, [options])`
-
-Creates a new FeedStore `without wait for their initialization.`
-
-> The initialization happens by running: `await feedStore.initialize()`
-
-#### `feedStore.openFeed(path, [options]) -> Promise<Hypercore>`
-
-Creates a new hypercore feed identified by a string path.
-
-> If the feed exists but is not loaded it will load the feed instead of creating a new one.
-
-- `path: string`: A require name to identify and index the feed to open.
-- `options: Object`: Feed options.
-  - `metadata: *`: Serializable value with custom data about the feed.
-  - `[...hypercoreOptions]`: Hypercore options.
-
-#### `feedStore.closeFeed(path) -> Promise`
-
-Close a feed by the path.
-
-#### `feedStore.deleteDescriptor(path) -> Promise`
-
-Remove a descriptor from the database by the path.
-
-> This operation would not close the feed.
-
-You can check a real example in: [example](https://github.com/wirelineio/wireline-core/tree/master/packages/broadcast/example)
+#### `const broadcast = new Broadcast(middleware, [options])`
 
 ## Contributing
 

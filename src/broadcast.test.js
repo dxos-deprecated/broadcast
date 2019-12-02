@@ -13,17 +13,17 @@ class Peer extends EventEmitter {
     this.id = crypto.randomBytes(32);
     this._peers = new Map();
     this._messages = [];
-    this._broadcast = new Broadcast({
-      id: this.id,
-      middleware: {
-        lookup: async () => Array.from(this._peers.values()),
-        send: async (packet, node) => {
-          node.send(packet);
-        },
-        subscribe: (onPacket) => {
-          this.on('message', onPacket);
-        }
+    const middleware = {
+      lookup: async () => Array.from(this._peers.values()),
+      send: async (packet, node) => {
+        node.send(packet);
+      },
+      subscribe: (onPacket) => {
+        this.on('message', onPacket);
       }
+    };
+    this._broadcast = new Broadcast(middleware, {
+      id: this.id
     });
 
     this._broadcast.on('packet', (packet) => {

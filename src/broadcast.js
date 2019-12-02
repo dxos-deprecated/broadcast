@@ -2,6 +2,7 @@
 // Copyright 2019 DxOS.
 //
 
+import assert from 'assert';
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
 import Codec from '@dxos/codec-protobuf';
@@ -21,21 +22,20 @@ const msgId = (seqno, from) => {
 };
 
 export class Broadcast extends EventEmitter {
-  constructor (opts = {}) {
+  constructor (middleware, opts = {}) {
+    assert(middleware);
+    assert(middleware.lookup);
+    assert(middleware.send);
+    assert(middleware.subscribe);
+
     super();
 
-    const { id, middleware = {}, maxAge = 10 * 1000, maxSize = 200 } = opts;
-    const { lookup, send, subscribe } = middleware;
-
-    console.assert(id);
-    console.assert(lookup);
-    console.assert(send);
-    console.assert(subscribe);
+    const { id = crypto.randomBytes(32), maxAge = 10 * 1000, maxSize = 200 } = opts;
 
     this._id = id;
-    this._lookup = this._buildLookup(lookup);
-    this._send = (...args) => send(...args);
-    this._subscribe = onPacket => subscribe(onPacket);
+    this._lookup = this._buildLookup(middleware.lookup);
+    this._send = (...args) => middleware.send(...args);
+    this._subscribe = onPacket => middleware.subscribe(onPacket);
 
     this._running = false;
     this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
