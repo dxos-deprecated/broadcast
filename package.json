@@ -18,7 +18,7 @@
   "main": "index.js",
   "browser": "dist/index.js",
   "scripts": {
-    "build": "npm run clean && build:protobuf && npm run build:babel",
+    "build": "npm run clean && npm run build:protobuf && npm run build:babel",
     "build:babel": "babel ./src --out-dir ./dist --ignore \"**/*.test.js\" --source-maps",
     "build:protobuf": "pbjs -t json src/schema.proto -o src/schema.json && cpy src/schema.json dist",
     "clean": "del-cli dist",
@@ -50,6 +50,7 @@
     "babel-plugin-add-module-exports": "^1.0.2",
     "babel-plugin-inline-import": "^3.0.0",
     "coveralls": "^3.0.7",
+    "cpy-cli": "^2.0.0",
     "del-cli": "^3.0.0",
     "jest": "^24.5.0",
     "semistandard": "^14.2.0",

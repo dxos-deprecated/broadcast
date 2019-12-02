@@ -52,7 +52,7 @@ $ npm install @dxos/broadcast
 ## Usage
 
 ```javascript
-import Broadcast from '@wirelineio/broadcast';
+import { Broadcast } from '@wirelineio/broadcast';
 
 const middleware = {
   lookup: async () => {

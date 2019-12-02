@@ -1,6 +1,6 @@
 import createGraph from 'ngraph.graph';
 import ForceGraph from './force-graph';
-import Broadcast from '..';
+import { Broadcast } from '..';
 import { addPeer as _addPeer, removePeer as _removePeer, findPeer, nodesToArray } from './utils';
 
 const MAX_PEERS = 2;
@@ -54,9 +54,8 @@ const addPeer = () => {
     }
   };
 
-  const broadcast = new Broadcast({
-    id: peer.id,
-    middleware
+  const broadcast = new Broadcast(middleware, {
+    id: peer.id
   });
 
   peer.broadcast = broadcast;
