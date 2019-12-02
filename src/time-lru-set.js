@@ -25,7 +25,16 @@ class ItemCache {
   }
 }
 
+/**
+ * Least Recently Used cache "set" structure with time live support.
+ *
+ */
 class TimeLRUSet {
+  /**
+   * @param {Object} options
+   * @param {number} [options.maxAge=10000] Maximum live time for a value not updated recently.
+   * @param {number} [options.maxSize=100] Max size of the cache.
+   */
   constructor (options = {}) {
     const { maxAge = 10 * 1000, maxSize = 100 } = options;
 
@@ -36,13 +45,36 @@ class TimeLRUSet {
     this._map = new Map();
   }
 
+  /**
+   * @type {number}
+   */
+  get size () {
+    return this._map.size;
+  }
+
+  /**
+   * Method returns a new Iterator object that contains the values
+   * for each element in the Set object in insertion order.
+   *
+   * @returns {Iterator<*>}
+   */
+  values () {
+    return this._map.keys();
+  }
+
+  /**
+   * Add a value.
+   *
+   * @param {*} value Value to store.
+   * @returns {TimeLRUSet}
+   */
   add (value) {
-    if (this._list.length === this._maxSize) {
-      this._deleteLRU();
+    if (this.has(value)) {
+      return this;
     }
 
-    if (this.has(value)) {
-      return;
+    if (this._list.length === this._maxSize) {
+      this._deleteLRU();
     }
 
     const item = new ItemCache({
@@ -55,20 +87,39 @@ class TimeLRUSet {
 
     item.update();
     this._updateLRU(value);
+    return this;
   }
 
+  /**
+   * Delete a value.
+   *
+   * @param {*} value
+   * @returns {boolean}
+   */
   delete (value) {
     const item = this._map.get(value);
-    item.clear();
 
+    if (!item) {
+      return false;
+    }
+
+    item.clear();
     this._map.delete(value);
 
     const idx = this._list.indexOf(value);
     if (idx !== -1) {
       this._list.splice(idx, 1);
     }
+
+    return true;
   }
 
+  /**
+   * Check the existence of a value in set.
+   *
+   * @param {*} value
+   * @returns {boolean}
+   */
   has (value) {
     const item = this._map.get(value);
 
@@ -80,13 +131,16 @@ class TimeLRUSet {
     return !!item;
   }
 
+  /**
+   * Clear all the values.
+   *
+   * @returns {undefined}
+   */
   clear () {
-    process.nextTick(() => {
-      this._list = [];
-      this._map.forEach((value, key) => {
-        value.clear();
-        this._map.delete(key);
-      });
+    this._list = [];
+    this._map.forEach((value, key) => {
+      value.clear();
+      this._map.delete(key);
     });
   }
 
@@ -99,10 +153,7 @@ class TimeLRUSet {
   }
 
   _deleteLRU () {
-    const value = this._list.shift();
-    if (value) {
-      this.delete(value);
-    }
+    this.delete(this._list.shift());
   }
 
   _onTimeout (value) {

@@ -16,8 +16,8 @@ debug.formatters.h = v => v.toString('hex').slice(0, 6);
 const log = debug('broadcast');
 
 const msgId = (seqno, from) => {
-  console.assert(Buffer.isBuffer(seqno));
-  console.assert(Buffer.isBuffer(from));
+  assert(Buffer.isBuffer(seqno));
+  assert(Buffer.isBuffer(from));
   return `${seqno.toString('hex')}:${from.toString('hex')}`;
 };
 
@@ -42,18 +42,16 @@ export class Broadcast extends EventEmitter {
     this._peers = [];
     this._codec = new Codec({ verify: true });
     this._codec.loadFromJSON(schema);
-
-    this.on('error', (err) => { log(err); });
   }
 
   async publish (data, { seqno = crypto.randomBytes(32) } = {}) {
+    assert(Buffer.isBuffer(data));
+    assert(Buffer.isBuffer(seqno));
+
     if (!this._running) {
       console.warn('Broadcast not running.');
       return;
     }
-
-    console.assert(Buffer.isBuffer(data));
-    console.assert(Buffer.isBuffer(seqno));
 
     const packet = { seqno, origin: this._id, data };
     await this._publish(packet);
@@ -89,7 +87,7 @@ export class Broadcast extends EventEmitter {
         looking = null;
         log('lookup of %h', this._id, this._peers);
       } catch (err) {
-        this.emit('error', err);
+        this.emit('lookup-error', err);
         looking = null;
       }
     };
@@ -124,13 +122,13 @@ export class Broadcast extends EventEmitter {
           this._seenSeqs.add(msgId(message.seqno, peer.id));
           await this._send(packetEncoded, peer);
         } catch (err) {
-          this.emit('error', err);
+          this.emit('send-error', err);
         }
       });
 
       await Promise.all(waitFor);
     } catch (err) {
-      this.emit('error', err);
+      this.emit('send-error', err);
     }
   }
 
@@ -156,8 +154,7 @@ export class Broadcast extends EventEmitter {
 
       return packet;
     } catch (err) {
-      this.emit('error', err);
-      throw err;
+      this.emit('subscribe-error', err);
     }
   }
 }
