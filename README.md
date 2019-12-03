@@ -19,7 +19,7 @@ Broadcast messages follows the schema:
 message Packet {
   bytes seqno = 1;
   bytes origin = 2;
-  bytes from = 3
+  bytes from = 3;
   bytes data = 4;
 }
 ```
@@ -27,7 +27,7 @@ message Packet {
 - `seqno`: By default is a random 32-bit but could be used to provide an alternative sorted sequence number.
 - `origin`: Represents the author's ID of the message. To identify a message (`msgId`) in the network you should check for the: `seqno + origin`.
 - `from`: Represents the current sender's ID of the message.
-- `data`: field is an opaque blob of data, it can contain any data that the publisher wants
+- `data`: Represents an opaque blob of data, it can contain any data that the publisher wants
 it to defined by higher layers (e.g. a presence information message).
 
 Nodes send any message originating locally to all current peers. Upon receiving a message, a
@@ -35,8 +35,7 @@ node delivers it locally to any listeners, and forward the message on to its cur
 peers, excluding the peer from which it was received.
 
 Nodes maintain a record of the messages they have received and originated
-recently, by `msgId(seqno + from)`, and the set of peers to which each message has already
-been sent. This is used to avoid sending the same message to the same peer
+recently, by `msgId(seqno + from)`. This is used to avoid sending the same message to the same peer
 more than once. These records expire after some time to limit memory consumption by: `maxAge` and `maxSize`.
 
 <p align="center">
