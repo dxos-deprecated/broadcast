@@ -125,13 +125,19 @@ Initialize the cache and runs the defined subscription.
 
 Clear the cache and unsubscribe from incoming messages.
 
-#### `broadcast.publish(data, [options])`
+#### `broadcast.publish(data, [options]) -> Promise<Packet>`
 
 Broadcast a flooding message to the peers neighboors.
 
 - `data: Buffer`: Any data that you want to broadcast.
 - `options`
   - `seqno: Buffer`: Defines a custom seqno for the message. Default: `crypto.randomBytes(32)`.
+
+- `Packet`
+  - `seqno: Buffer`
+  - `origin: Buffer`
+  - `from: Buffer`
+  - `data: Buffer`
 
 ## Contributing
 

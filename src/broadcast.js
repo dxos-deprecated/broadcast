@@ -80,7 +80,7 @@ export class Broadcast extends EventEmitter {
    * @param {Buffer} data
    * @param {Object} options
    * @param {Buffer} [options.seqno=crypto.randomBytes(32)]
-   * @returns {Promise}
+   * @returns {Promise<Packet>}
    */
   async publish (data, options = {}) {
     const { seqno = crypto.randomBytes(32) } = options;
@@ -94,7 +94,7 @@ export class Broadcast extends EventEmitter {
     }
 
     const packet = { seqno, origin: this._id, data };
-    await this._publish(packet);
+    return this._publish(packet);
   }
 
   /**
@@ -154,7 +154,7 @@ export class Broadcast extends EventEmitter {
    * Publish and/or Forward a packet message to each peer neighboor.
    *
    * @param {Packet} packet
-   * @returns {Promise}
+   * @returns {Promise<Packet>}
    */
   async _publish (packet) {
     if (!this._running) return;
@@ -190,8 +190,11 @@ export class Broadcast extends EventEmitter {
       });
 
       await Promise.all(waitFor);
+
+      return message;
     } catch (err) {
       this.emit('send-error', err);
+      throw err;
     }
   }
 
