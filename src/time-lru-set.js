@@ -2,11 +2,11 @@
 // Copyright 2019 DxOS.
 //
 
-class ItemCache {
+class CachedItem {
   constructor ({ value, maxAge, onTimeout }) {
     this._value = value;
     this._maxAge = maxAge;
-    this._onTimeout = value => onTimeout(value);
+    this._onTimeout = onTimeout;
   }
 
   update () {
@@ -27,7 +27,6 @@ class ItemCache {
 
 /**
  * Least Recently Used cache "set" structure with time live support.
- *
  */
 class TimeLRUSet {
   /**
@@ -42,14 +41,14 @@ class TimeLRUSet {
     this._maxSize = maxSize;
 
     this._list = [];
-    this._map = new Map();
+    this._itemsByValue = new Map();
   }
 
   /**
    * @type {number}
    */
   get size () {
-    return this._map.size;
+    return this._itemsByValue.size;
   }
 
   /**
@@ -59,7 +58,7 @@ class TimeLRUSet {
    * @returns {Iterator<*>}
    */
   values () {
-    return this._map.keys();
+    return this._itemsByValue.keys();
   }
 
   /**
@@ -77,13 +76,13 @@ class TimeLRUSet {
       this._deleteLRU();
     }
 
-    const item = new ItemCache({
+    const item = new CachedItem({
       value,
       maxAge: this._maxAge,
-      onTimeout: this._onTimeout.bind(this)
+      onTimeout: value => this._onTimeout(value)
     });
 
-    this._map.set(value, item);
+    this._itemsByValue.set(value, item);
 
     item.update();
     this._updateLRU(value);
@@ -97,14 +96,14 @@ class TimeLRUSet {
    * @returns {boolean}
    */
   delete (value) {
-    const item = this._map.get(value);
+    const item = this._itemsByValue.get(value);
 
     if (!item) {
       return false;
     }
 
     item.clear();
-    this._map.delete(value);
+    this._itemsByValue.delete(value);
 
     const idx = this._list.indexOf(value);
     if (idx !== -1) {
@@ -121,7 +120,7 @@ class TimeLRUSet {
    * @returns {boolean}
    */
   has (value) {
-    const item = this._map.get(value);
+    const item = this._itemsByValue.get(value);
 
     if (item) {
       item.update();
@@ -138,9 +137,9 @@ class TimeLRUSet {
    */
   clear () {
     this._list = [];
-    this._map.forEach((value, key) => {
+    this._itemsByValue.forEach((value, key) => {
       value.clear();
-      this._map.delete(key);
+      this._itemsByValue.delete(key);
     });
   }
 

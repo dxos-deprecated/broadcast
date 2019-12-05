@@ -15,6 +15,7 @@ class Peer extends EventEmitter {
   constructor () {
     super();
     this.id = crypto.randomBytes(32);
+
     this._peers = new Map();
     this._messages = new Map();
 

@@ -37,8 +37,6 @@ const msgId = (seqno, from) => {
  */
 
 /**
- * Broadcast
- *
  * Abstract module to send broadcast messages.
  *
  * @extends {EventEmitter}
@@ -164,18 +162,18 @@ export class Broadcast extends EventEmitter {
 
       await this._lookup();
 
-      // I update the package to assign the from prop to me (the current sender).
+      // Update the package to set the current sender..
       const message = Object.assign({}, packet, { from: this._id });
 
       const packetEncoded = this._codec.encode({
-        type: 'broadcast.Packet',
+        type: 'dxos.broadcast.Packet',
         message
       });
 
       const waitFor = this._peers.map(async (peer) => {
         if (!this._running) return;
 
-        // Don't send the message to neighbors that already seen the message.
+        // Don't send the message to neighbors that have already seen the message.
         if (this._seenSeqs.has(msgId(message.seqno, peer.id))) return;
 
         log('publish %h -> %h', this._id, peer.id, message);

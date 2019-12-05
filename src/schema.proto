@@ -1,5 +1,5 @@
 syntax = "proto3";
-package broadcast;
+package dxos.broadcast;
 
 message Packet {
   bytes seqno = 1;
