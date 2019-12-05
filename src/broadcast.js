@@ -89,8 +89,7 @@ export class Broadcast extends EventEmitter {
     assert(Buffer.isBuffer(seqno));
 
     if (!this._running) {
-      console.warn('Broadcast not running.');
-      return;
+      throw new Error('Broadcast not running.');
     }
 
     const packet = { seqno, origin: this._id, data };

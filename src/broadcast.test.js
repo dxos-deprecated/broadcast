@@ -9,6 +9,8 @@ import waitForExpect from 'wait-for-expect';
 
 import { Broadcast } from './broadcast';
 
+const id = (packet) => packet.seqno.toString('hex') + packet.origin.toString('hex');
+
 class Peer extends EventEmitter {
   constructor () {
     super();
@@ -31,8 +33,7 @@ class Peer extends EventEmitter {
     });
 
     this._broadcast.on('packet', (packet) => {
-      const id = packet.seqno.toString('hex') + packet.origin.toString('hex');
-      this._messages.set(id, packet.data.toString('utf8'));
+      this._messages.set(id(packet), packet.data.toString('utf8'));
       this.emit('packet', packet);
     });
 
@@ -51,8 +52,8 @@ class Peer extends EventEmitter {
     this._peers.set(peer.id.toString('hex'), peer);
   }
 
-  publish (message) {
-    this._broadcast.publish(message);
+  publish (message, options) {
+    return this._broadcast.publish(message, options);
   }
 
   stop () {
@@ -80,23 +81,25 @@ function createPeers (graph) {
 
 test('broadcast a message through 63 peers connected in a balanced network.', async () => {
   const [peerOrigin, ...peers] = createPeers(generator.balancedBinTree(5));
-  let packets = 62;
 
-  peers.forEach(peer => {
-    peer.once('packet', () => {
-      packets--;
-    });
-  });
-
-  peerOrigin.publish(Buffer.from('message1'));
-
+  let packet = await peerOrigin.publish(Buffer.from('message1'));
   await waitForExpect(() => {
-    expect(packets).toBe(0);
+    const finish = peers.reduce((prev, current) => {
+      return prev && current.messages.has(id(packet));
+    }, true);
+
+    expect(finish).toBe(true);
   }, 5000, 1000);
 
-  peers.forEach(peer => {
-    expect(Array.from(peer.messages.values())).toEqual(['message1']);
-  });
+  packet = await peerOrigin.publish(Buffer.from('message1'), { seqno: Buffer.from('custom-seqno') });
+  expect(packet.seqno.toString()).toBe('custom-seqno');
+  await waitForExpect(() => {
+    const finish = peers.reduce((prev, current) => {
+      return prev && current.messages.has(id(packet));
+    }, true);
+
+    expect(finish).toBe(true);
+  }, 5000, 1000);
 
   peers.forEach(peer => peer.stop());
 });
