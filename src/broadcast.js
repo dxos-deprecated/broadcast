@@ -5,7 +5,7 @@
 import assert from 'assert';
 import { EventEmitter } from 'events';
 import crypto from 'crypto';
-import Codec from '@dxos/codec-protobuf';
+import { Codec } from '@dxos/codec-protobuf';
 import debug from 'debug';
 
 // eslint-disable-next-line
@@ -68,8 +68,10 @@ export class Broadcast extends EventEmitter {
     this._running = false;
     this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
     this._peers = [];
-    this._codec = new Codec({ verify: true });
-    this._codec.loadFromJSON(schema);
+    this._codec = new Codec('dxos.broadcast.Packet');
+    this._codec
+      .addJson(JSON.parse(schema))
+      .build();
   }
 
   /**
@@ -163,23 +165,20 @@ export class Broadcast extends EventEmitter {
       await this._lookup();
 
       // Update the package to set the current sender..
-      const message = Object.assign({}, packet, { from: this._id });
+      packet = Object.assign({}, packet, { from: this._id });
 
-      const packetEncoded = this._codec.encode({
-        type: 'dxos.broadcast.Packet',
-        message
-      });
+      const packetEncoded = this._codec.encode(packet);
 
       const waitFor = this._peers.map(async (peer) => {
         if (!this._running) return;
 
         // Don't send the message to neighbors that have already seen the message.
-        if (this._seenSeqs.has(msgId(message.seqno, peer.id))) return;
+        if (this._seenSeqs.has(msgId(packet.seqno, peer.id))) return;
 
-        log('publish %h -> %h', this._id, peer.id, message);
+        log('publish %h -> %h', this._id, peer.id, packet);
 
         try {
-          this._seenSeqs.add(msgId(message.seqno, peer.id));
+          this._seenSeqs.add(msgId(packet.seqno, peer.id));
           await this._send(packetEncoded, peer);
         } catch (err) {
           this.emit('send-error', err);
@@ -188,7 +187,7 @@ export class Broadcast extends EventEmitter {
 
       await Promise.all(waitFor);
 
-      return message;
+      return packet;
     } catch (err) {
       this.emit('send-error', err);
       throw err;
@@ -205,7 +204,7 @@ export class Broadcast extends EventEmitter {
     if (!this._running) return;
 
     try {
-      const { message: packet } = this._codec.decode(packetEncoded);
+      const packet = this._codec.decode(packetEncoded);
 
       // Cache the packet as "seen by the peer from".
       this._seenSeqs.add(msgId(packet.seqno, packet.from));
