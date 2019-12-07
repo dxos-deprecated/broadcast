@@ -12,13 +12,13 @@ describe('time lru set', () => {
     maxSize: 2
   });
 
-  test.skip('default timeSet', () => {
+  test('default timeSet', () => {
     const timeSet = new TimeLRUSet();
     expect(timeSet._maxAge).toBe(10 * 1000);
     expect(timeSet._maxSize).toBe(100);
   });
 
-  test.skip('time live', async () => {
+  test('time live', async () => {
     timeSet.add('foo');
     timeSet.add('bar');
 
@@ -34,7 +34,7 @@ describe('time lru set', () => {
     expect(timeSet.has('bar')).toBe(false);
   });
 
-  test.skip('delete and clear', () => {
+  test('delete and clear', () => {
     expect(timeSet.delete('foo')).toBe(true);
     expect(timeSet.delete('bar')).toBe(false);
 
@@ -50,7 +50,7 @@ describe('time lru set', () => {
     expect(timeSet.size).toBe(0);
   });
 
-  test.skip('cache size', () => {
+  test('cache size', () => {
     timeSet.add('foo');
     timeSet.add('bar');
     expect(timeSet.size).toBe(2);
@@ -63,7 +63,7 @@ describe('time lru set', () => {
     timeSet.clear();
   });
 
-  test.skip('check lru order', () => {
+  test('check lru order', () => {
     timeSet.add('foo');
     timeSet.add('bar');
 
