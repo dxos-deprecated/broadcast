@@ -26,7 +26,7 @@
     "coveralls": "npm run coverage && cat ./coverage/lcov.info | coveralls",
     "lint": "semistandard 'src/**/*.js'",
     "prepublishOnly": "npm run build && npm run test",
-    "test": "jest --verbose --passWithNoTests --detectOpenHandles src",
+    "test": "jest --verbose --passWithNoTests src",
     "posttest": "npm run lint"
   },
   "browserslist": [
