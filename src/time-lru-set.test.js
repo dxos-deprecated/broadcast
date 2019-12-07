@@ -8,7 +8,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('time lru set', () => {
   const timeSet = new TimeLRUSet({
-    maxAge: 1 * 1000,
+    maxAge: 2 * 1000,
     maxSize: 2
   });
 
@@ -22,11 +22,11 @@ describe('time lru set', () => {
     timeSet.add('foo');
     timeSet.add('bar');
 
-    await delay(0.5 * 1000);
+    await delay(1.5 * 1000);
 
     timeSet.add('foo');
 
-    await delay(0.5 * 1000);
+    await delay(1 * 1000);
 
     expect(timeSet.size).toBe(1);
     expect(Array.from(timeSet.values())).toEqual(['foo']);
@@ -82,5 +82,7 @@ describe('time lru set', () => {
     expect(timeSet.size).toBe(2);
     expect(timeSet.has('foo')).toBe(true);
     expect(timeSet.has('bar')).toBe(true);
+
+    timeSet.clear();
   });
 });
