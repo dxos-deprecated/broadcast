@@ -26,6 +26,7 @@ class Peer extends EventEmitter {
       },
       subscribe: (onPacket) => {
         this.on('message', onPacket);
+        return () => this.off('message', onPacket);
       }
     };
 
@@ -102,5 +103,6 @@ test('broadcast a message through 63 peers connected in a balanced network.', as
     expect(finish).toBe(true);
   }, 5000, 1000);
 
+  peerOrigin.stop();
   peers.forEach(peer => peer.stop());
 });
