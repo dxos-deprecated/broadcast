@@ -80,7 +80,7 @@ function createPeers (graph) {
   return Array.from(peers.values());
 }
 
-test.skip('broadcast a message through 63 peers connected in a balanced network.', async () => {
+test('broadcast a message through 63 peers connected in a balanced network.', async () => {
   const [peerOrigin, ...peers] = createPeers(generator.balancedBinTree(5));
 
   let packet = await peerOrigin.publish(Buffer.from('message1'));
