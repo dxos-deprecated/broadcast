@@ -1,0 +1,32 @@
+{
+  "nested": {
+    "dxos": {
+      "nested": {
+        "broadcast": {
+          "nested": {
+            "Packet": {
+              "fields": {
+                "seqno": {
+                  "type": "bytes",
+                  "id": 1
+                },
+                "origin": {
+                  "type": "bytes",
+                  "id": 2
+                },
+                "from": {
+                  "type": "bytes",
+                  "id": 3
+                },
+                "data": {
+                  "type": "bytes",
+                  "id": 4
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
