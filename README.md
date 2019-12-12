@@ -109,7 +109,7 @@ You can check a real example in: [example](https://github.com/dxos/broadcast/tre
     - `Peer: { id: Buffer, ...props }`
   - `send: (packet: Buffer, peer: Object) => Promise`: Defines how to send the packet builded by the broadcast.
   - `subscribe: (onPacket) => unsubscribeFunction`: Defines how to subscribe to incoming packets.
-    - `onPacket: (data: Buffer) => boolean`: Callback to process incoming data. It returns true if the broadcast could decode the message or false if not.
+    - `onPacket: (data: Buffer) => (Packet|undefined)`: Callback to process incoming data. It returns true if the broadcast could decode the message or false if not.
     - `unsubscribeFunction: Function`: Defines a way to unsubscribe from listening messages if the broadcast stop working. Helpful if you are working with streams and event emitters.
 
 - `options`

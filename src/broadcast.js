@@ -198,7 +198,7 @@ export class Broadcast extends EventEmitter {
    * Process incoming encoded packets.
    *
    * @param {Buffer} packetEncoded
-   * @returns {boolean} Returns true if the decoding was successful.
+   * @returns {(Packet|undefined)} Returns the packet if the decoding was successful.
    */
   _onPacket (packetEncoded) {
     if (!this._running) return;
@@ -220,10 +220,9 @@ export class Broadcast extends EventEmitter {
 
       this._publish(packet).catch(() => {});
 
-      return true;
+      return packet;
     } catch (err) {
       this.emit('subscribe-error', err);
-      return false;
     }
   }
 }
