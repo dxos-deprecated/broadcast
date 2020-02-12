@@ -699,6 +699,17 @@
     protobufjs "https://github.com/protobufjs/protobuf.js"
     source-map-support "^0.5.12"
 
+"@dxos/network-generator@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@dxos/network-generator/-/network-generator-0.0.1.tgz#a369a07fd64ab7213d998ba1784a250dcba0c563"
+  integrity sha512-FdyIlwdR0v5nN5uzc3CXnDifs7uN66t8Zmr7RtCUE80Tm2/upBw64vilKi5yelr+41i9V2as2VfXmoqYNTcTvg==
+  dependencies:
+    debug "^4.1.1"
+    end-of-stream "^1.4.4"
+    ngraph.generators "^18.0.1"
+    ngraph.graph "^19.0.3"
+    source-map-support "^0.5.12"
+
 "@jest/console@^24.7.1", "@jest/console@^24.9.0":
   version "24.9.0"
   resolved "https://registry.yarnpkg.com/@jest/console/-/console-24.9.0.tgz#79b1bc06fb74a8cfb01cbdedf945584b1b9707f0"
@@ -1965,7 +1976,7 @@ emoji-regex@^7.0.1:
   resolved "https://registry.yarnpkg.com/emoji-regex/-/emoji-regex-7.0.3.tgz#933a04052860c85e83c122479c4748a8e4c72156"
   integrity sha512-CwBLREIQ7LvYFB0WyRvwhq5N5qPhc6PMjD6bYggFlI5YyDgl+0vxq5VHbMOFqLg7hfWzmu8T5Z1QofhmTIhItA==
 
-end-of-stream@^1.1.0:
+end-of-stream@^1.1.0, end-of-stream@^1.4.4:
   version "1.4.4"
   resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.4.tgz#5ae64a5f45057baf3626ec14da0ca5e4b2431eb0"
   integrity sha512-+uw1inIHVPQoaVuHzRyXd21icM+cnt4CzD5rW+NC1wjOUSTOs+Te7FOv7AhN7vS9x/oIyhLP5PR1H+phQAHu5Q==
@@ -3931,6 +3942,11 @@ ngraph.events@0.0.3:
   resolved "https://registry.yarnpkg.com/ngraph.events/-/ngraph.events-0.0.3.tgz#38f55316f3d207ad631ff94f6622ca8f2c0e87d0"
   integrity sha1-OPVTFvPSB61jH/lPZiLKjywOh9A=
 
+ngraph.events@^1.2.0:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/ngraph.events/-/ngraph.events-1.2.1.tgz#6e40425ef9dec1e074bbef6da56c8d79b9188fd8"
+  integrity sha512-D4C+nXH/RFxioGXQdHu8ELDtC6EaCiNsZtih0IvyGN81OZSUby4jXoJ5+RNWasfsd0FnKxxpAROyUMzw64QNsw==
+
 ngraph.generators@^18.0.1:
   version "18.0.1"
   resolved "https://registry.yarnpkg.com/ngraph.generators/-/ngraph.generators-18.0.1.tgz#b92be07457832f427da504414b2bb059c39cc27b"
@@ -3945,6 +3961,13 @@ ngraph.graph@18.0.0:
   integrity sha512-HH39PulrZrFIcO6Qw4Ts3aYqPauAV/6p2lbbtPiFZoUDAASLtfnfg4wtXohy0ZE9Ik51wUgWaZ+FfyKk/SRlzQ==
   dependencies:
     ngraph.events "0.0.3"
+
+ngraph.graph@^19.0.3:
+  version "19.0.3"
+  resolved "https://registry.yarnpkg.com/ngraph.graph/-/ngraph.graph-19.0.3.tgz#d9b28c157578478526d4aa18a35a97955fcf5623"
+  integrity sha512-RCwmtHYxoWvTIREu8f37QLtbzj55r+KM9m1/Ssk+0rO4MDX6/rjBNxGZBcf/lu+HbfVz1WDc0/KQFfiZhdDnVg==
+  dependencies:
+    ngraph.events "^1.2.0"
 
 ngraph.random@0.1.0:
   version "0.1.0"

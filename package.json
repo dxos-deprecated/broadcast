@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@dxos/codec-protobuf": "^1.1.0-beta.2",
+    "@dxos/network-generator": "^0.0.1",
     "debug": "^4.1.1",
     "source-map-support": "^0.5.12"
   },

@@ -3,18 +3,18 @@
 //
 
 import { EventEmitter } from 'events';
-import crypto from 'crypto';
-import generator from 'ngraph.generators';
 import waitForExpect from 'wait-for-expect';
+
+import { NetworkGenerator } from '@dxos/network-generator';
 
 import { Broadcast } from './broadcast';
 
-const id = (packet) => packet.seqno.toString('hex') + packet.origin.toString('hex');
+const packetId = (packet) => packet.seqno.toString('hex') + packet.origin.toString('hex');
 
 class Peer extends EventEmitter {
-  constructor () {
+  constructor (id) {
     super();
-    this.id = crypto.randomBytes(32);
+    this.id = id;
 
     this._peers = new Map();
     this._messages = new Map();
@@ -35,7 +35,7 @@ class Peer extends EventEmitter {
     });
 
     this._broadcast.on('packet', (packet) => {
-      this._messages.set(id(packet), packet.data.toString('utf8'));
+      this._messages.set(packetId(packet), packet.data.toString('utf8'));
       this.emit('packet', packet);
     });
 
@@ -63,41 +63,32 @@ class Peer extends EventEmitter {
   }
 }
 
-function createPeers (graph) {
-  const peers = new Map();
-
-  graph.forEachNode(node => {
-    peers.set(node.id, new Peer());
-  });
-
-  graph.forEachLink(link => {
-    const fromPeer = peers.get(link.fromId);
-    const toPeer = peers.get(link.toId);
-    // Communication bidirectional.
-    fromPeer.connect(toPeer);
-    toPeer.connect(fromPeer);
-  });
-
-  return Array.from(peers.values());
-}
-
 test('broadcast a message through 63 peers connected in a balanced network.', async () => {
-  const [peerOrigin, ...peers] = createPeers(generator.balancedBinTree(5));
+  const generator = new NetworkGenerator({
+    createPeer: (id) => new Peer(id),
+    createConnection: (peerFrom, peerTo) => {
+      peerFrom.connect(peerTo);
+      peerTo.connect(peerFrom);
+    }
+  });
+
+  const network = generator.balancedBinTree(5);
+  const [peerOrigin, ...peers] = network.peers;
 
   let packet = await peerOrigin.publish(Buffer.from('message1'));
   await waitForExpect(() => {
     const finish = peers.reduce((prev, current) => {
-      return prev && current.messages.has(id(packet));
+      return prev && current.messages.has(packetId(packet));
     }, true);
 
     expect(finish).toBe(true);
-  }, 5000, 1000);
+  }, 10000, 1000);
 
   packet = await peerOrigin.publish(Buffer.from('message1'), { seqno: Buffer.from('custom-seqno') });
   expect(packet.seqno.toString()).toBe('custom-seqno');
   await waitForExpect(() => {
     const finish = peers.reduce((prev, current) => {
-      return prev && current.messages.has(id(packet));
+      return prev && current.messages.has(packetId(packet));
     }, true);
 
     expect(finish).toBe(true);
