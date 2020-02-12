@@ -61,7 +61,7 @@ export class Broadcast extends EventEmitter {
     const { id = crypto.randomBytes(32), maxAge = 10 * 1000, maxSize = 200 } = options;
 
     this._id = id;
-    this._lookup = this._buildLookup(middleware.lookup);
+    this._lookup = this._buildLookup(() => middleware.lookup());
     this._send = (...args) => middleware.send(...args);
     this._subscribe = onPacket => middleware.subscribe(onPacket);
 
@@ -133,18 +133,12 @@ export class Broadcast extends EventEmitter {
    * @returns {Function}
    */
   _buildLookup (lookup) {
-    let looking = null;
     return async () => {
       try {
-        if (!looking) {
-          looking = lookup();
-        }
-        this._peers = await looking;
-        looking = null;
+        this._peers = await lookup();
         log('lookup of %h', this._id, this._peers);
       } catch (err) {
         this.emit('lookup-error', err);
-        looking = null;
       }
     };
   }
