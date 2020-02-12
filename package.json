@@ -37,7 +37,6 @@
   },
   "dependencies": {
     "@dxos/codec-protobuf": "^1.1.0-beta.2",
-    "@dxos/network-generator": "^0.0.1",
     "debug": "^4.1.1",
     "source-map-support": "^0.5.12"
   },
@@ -46,6 +45,7 @@
     "@babel/core": "^7.4.5",
     "@babel/plugin-proposal-export-default-from": "^7.5.2",
     "@babel/preset-env": "^7.4.5",
+    "@dxos/network-generator": "^0.0.1",
     "babel-eslint": "^10.0.2",
     "babel-jest": "^24.8.0",
     "babel-plugin-add-module-exports": "^1.0.2",
@@ -54,7 +54,6 @@
     "cpy-cli": "^2.0.0",
     "del-cli": "^3.0.0",
     "jest": "^24.5.0",
-    "ngraph.generators": "^18.0.1",
     "semistandard": "^14.2.0",
     "wait-for-expect": "^3.0.1"
   },
