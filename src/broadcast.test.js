@@ -21,7 +21,7 @@ class Peer extends EventEmitter {
 
     const middleware = {
       lookup: async () => Array.from(this._peers.values()),
-      send: async (packet, node) => {
+      send: async (packet, node, options) => {
         node.send(packet);
       },
       subscribe: (onPacket) => {

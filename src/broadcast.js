@@ -93,7 +93,7 @@ export class Broadcast extends EventEmitter {
     }
 
     const packet = { seqno, origin: this._id, data };
-    return this._publish(packet);
+    return this._publish(packet, options);
   }
 
   /**
@@ -147,9 +147,10 @@ export class Broadcast extends EventEmitter {
    * Publish and/or Forward a packet message to each peer neighboor.
    *
    * @param {Packet} packet
+   * @param {Object} options
    * @returns {Promise<Packet>}
    */
-  async _publish (packet) {
+  async _publish (packet, options = {}) {
     if (!this._running) return;
 
     try {
@@ -173,7 +174,7 @@ export class Broadcast extends EventEmitter {
 
         try {
           this._seenSeqs.add(msgId(packet.seqno, peer.id));
-          await this._send(packetEncoded, peer);
+          await this._send(packetEncoded, peer, options);
         } catch (err) {
           this.emit('send-error', err);
         }
