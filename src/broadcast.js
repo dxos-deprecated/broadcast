@@ -58,7 +58,7 @@ export class Broadcast extends EventEmitter {
 
     super();
 
-    const { id = crypto.randomBytes(32), maxAge = 10 * 1000, maxSize = 200 } = options;
+    const { id = crypto.randomBytes(32), maxAge = 10 * 1000, maxSize = 100 } = options;
 
     this._id = id;
     this._lookup = this._buildLookup(() => middleware.lookup());

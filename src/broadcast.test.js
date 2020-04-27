@@ -9,10 +9,12 @@ import { NetworkGenerator } from '@dxos/network-generator';
 
 import { Broadcast } from './broadcast';
 
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 const packetId = (packet) => packet.seqno.toString('hex') + packet.origin.toString('hex');
 
 class Peer extends EventEmitter {
-  constructor (id) {
+  constructor (id, opts = {}) {
     super();
     this.id = id;
 
@@ -31,7 +33,8 @@ class Peer extends EventEmitter {
     };
 
     this._broadcast = new Broadcast(middleware, {
-      id: this.id
+      id: this.id,
+      ...opts
     });
 
     this._broadcast.on('packet', (packet) => {
@@ -44,6 +47,10 @@ class Peer extends EventEmitter {
 
   get messages () {
     return this._messages;
+  }
+
+  get seenMessagesSize () {
+    return this._broadcast._seenSeqs.size;
   }
 
   send (message) {
@@ -63,7 +70,7 @@ class Peer extends EventEmitter {
   }
 }
 
-test('broadcast a message through 63 peers connected in a balanced network.', async () => {
+test('balancedBinTree: broadcast a message through 63 peers.', async () => {
   const generator = new NetworkGenerator({
     createPeer: (id) => new Peer(id),
     createConnection: (peerFrom, peerTo) => {
@@ -94,6 +101,33 @@ test('broadcast a message through 63 peers connected in a balanced network.', as
     expect(finish).toBe(true);
   }, 5000, 1000);
 
-  peerOrigin.stop();
-  peers.forEach(peer => peer.stop());
+  network.peers.forEach(peer => peer.stop());
+});
+
+test('complete: broadcast a message through 50 peers.', async () => {
+  const generator = new NetworkGenerator({
+    createPeer: (id) => new Peer(id, { maxAge: 1000 }),
+    createConnection: (peerFrom, peerTo) => {
+      peerFrom.connect(peerTo);
+      peerTo.connect(peerFrom);
+    }
+  });
+
+  const network = generator.complete(50);
+  const [peerOrigin, ...peers] = network.peers;
+
+  const packet = await peerOrigin.publish(Buffer.from('message1'));
+  await waitForExpect(() => {
+    const finish = peers.reduce((prev, current) => {
+      return prev && current.messages.has(packetId(packet));
+    }, true);
+
+    expect(finish).toBe(true);
+  }, 10000, 1000);
+
+  await delay(1000);
+
+  expect(network.peers.reduce((prev, next) => (prev && next.seenMessagesSize === 0), true)).toBeTruthy();
+
+  network.peers.forEach(peer => peer.stop());
 });
