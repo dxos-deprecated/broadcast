@@ -2,7 +2,7 @@
 // Copyright 2019 DxOS.
 //
 
-import TimeLRUSet from './time-lru-set';
+import { TimeLRUSet } from './time-lru-set';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 

@@ -28,7 +28,7 @@ class CachedItem {
 /**
  * Least Recently Used cache "set" structure with time live support.
  */
-class TimeLRUSet {
+export class TimeLRUSet {
   /**
    * @param {Object} options
    * @param {number} [options.maxAge=10000] Maximum live time for a value not updated recently.
@@ -159,5 +159,3 @@ class TimeLRUSet {
     this.delete(value);
   }
 }
-
-export default TimeLRUSet;

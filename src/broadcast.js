@@ -10,7 +10,7 @@ import debug from 'debug';
 
 // eslint-disable-next-line
 import schema from './schema.json';
-import TimeLRUSet from './time-lru-set';
+import { TimeLRUSet } from './time-lru-set';
 
 debug.formatters.h = v => v.toString('hex').slice(0, 6);
 const log = debug('broadcast');
@@ -154,8 +154,14 @@ export class Broadcast extends EventEmitter {
     if (!this._running) return;
 
     try {
+      const ownerId = msgId(packet.seqno, this._id);
+
+      if (this._seenSeqs.has(ownerId)) {
+        return;
+      }
+
       // Seen it by me.
-      this._seenSeqs.add(msgId(packet.seqno, this._id));
+      this._seenSeqs.add(ownerId);
 
       await this._lookup();
 
