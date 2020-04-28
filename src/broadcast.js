@@ -170,20 +170,21 @@ export class Broadcast extends EventEmitter {
 
       const packetEncoded = this._codec.encode(packet);
 
-      const waitFor = this._peers.map(async (peer) => {
+      const waitFor = this._peers.map((peer) => {
         if (!this._running) return;
 
+        // Don't send the message to the origin peer.
+        if (packet.origin.equals(peer.id)) Promise.resolve();
+
         // Don't send the message to neighbors that have already seen the message.
-        if (this._seenSeqs.has(msgId(packet.seqno, peer.id))) return;
+        if (this._seenSeqs.has(msgId(packet.seqno, peer.id))) return Promise.resolve();
 
         log('publish %h -> %h', this._id, peer.id, packet);
 
-        try {
-          this._seenSeqs.add(msgId(packet.seqno, peer.id));
-          await this._send(packetEncoded, peer, options);
-        } catch (err) {
+        this._seenSeqs.add(msgId(packet.seqno, peer.id));
+        return this._send(packetEncoded, peer, options).catch(err => {
           this.emit('send-error', err);
-        }
+        });
       });
 
       await Promise.all(waitFor);
@@ -206,6 +207,9 @@ export class Broadcast extends EventEmitter {
 
     try {
       const packet = this._codec.decode(packetEncoded);
+
+      // Ignore packets produced by me and forwarded by others
+      if (packet.origin.equals(this._id)) return;
 
       // Cache the packet as "seen by the peer from".
       this._seenSeqs.add(msgId(packet.seqno, packet.from));
