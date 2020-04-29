@@ -3,10 +3,10 @@
 //
 
 import assert from 'assert';
-import { EventEmitter } from 'events';
 import crypto from 'crypto';
 import { Codec } from '@dxos/codec-protobuf';
 import debug from 'debug';
+import { NanoresourcePromise } from 'nanoresource-promise/emitter';
 
 // eslint-disable-next-line
 import schema from './schema.json';
@@ -23,9 +23,8 @@ const msgId = (seqno, from) => {
 
 /**
  * @typedef {Object} Middleware
- * @property {Function} lookup Async peer lookup.
  * @property {Function} send Defines how to send the packet builded by the broadcast.
- * @property {Function} subscribe Defines how to subscribe to incoming packets.
+ * @property {Function} subscribe Defines how to subscribe to incoming packets and update the internal list of peers.
  */
 
 /**
@@ -41,7 +40,7 @@ const msgId = (seqno, from) => {
  *
  * @extends {EventEmitter}
  */
-export class Broadcast extends EventEmitter {
+export class Broadcast extends NanoresourcePromise {
   /**
    * @constructor
    * @param {Middleware} middleware
@@ -52,7 +51,6 @@ export class Broadcast extends EventEmitter {
    */
   constructor (middleware, options = {}) {
     assert(middleware);
-    assert(middleware.lookup);
     assert(middleware.send);
     assert(middleware.subscribe);
 
@@ -61,11 +59,9 @@ export class Broadcast extends EventEmitter {
     const { id = crypto.randomBytes(32), maxAge = 10 * 1000, maxSize = 100 } = options;
 
     this._id = id;
-    this._lookup = this._buildLookup(() => middleware.lookup());
     this._send = (...args) => middleware.send(...args);
-    this._subscribe = onPacket => middleware.subscribe(onPacket);
+    this._subscribe = next => middleware.subscribe(next);
 
-    this._running = false;
     this._seenSeqs = new TimeLRUSet({ maxAge, maxSize });
     this._peers = [];
     this._codec = new Codec('dxos.broadcast.Packet');
@@ -88,59 +84,32 @@ export class Broadcast extends EventEmitter {
     assert(Buffer.isBuffer(data));
     assert(Buffer.isBuffer(seqno));
 
-    if (!this._running) {
-      throw new Error('Broadcast not running.');
-    }
-
     const packet = { seqno, origin: this._id, data };
     return this._publish(packet, options);
   }
 
   /**
-   * Initialize the cache and runs the defined subscription.
+   * Update internal list of peers.
    *
-   * @returns {undefined}
+   * @param {Array<Peer>} peers
    */
-  run () {
-    if (this._running) return;
-    this._running = true;
+  updatePeers (peers) {
+    this._peers = peers;
+  }
 
-    this._subscription = this._subscribe(packetEncoded => this._onPacket(packetEncoded)) || (() => {});
+  async _open () {
+    const onData = this._onPacket.bind(this);
+    const onPeers = this.updatePeers.bind(this);
+    this._unsubscribe = this._subscribe({ onData, onPeers }) || (() => {});
 
     log('running %h', this._id);
   }
 
-  /**
-   * Clear the cache and unsubscribe from incoming messages.
-   *
-   * @returns {undefined}
-   */
-  stop () {
-    if (!this._running) return;
-    this._running = false;
-
-    this._subscription();
+  async _close () {
+    this._unsubscribe();
     this._seenSeqs.clear();
 
     log('stop %h', this._id);
-  }
-
-  /**
-   * Build a deferrer lookup.
-   * If we call the lookup several times it would runs once a wait for it.
-   *
-   * @param {Function} lookup
-   * @returns {Function}
-   */
-  _buildLookup (lookup) {
-    return async () => {
-      try {
-        this._peers = await lookup();
-        log('lookup of %h', this._id, this._peers);
-      } catch (err) {
-        this.emit('lookup-error', err);
-      }
-    };
   }
 
   /**
@@ -151,7 +120,7 @@ export class Broadcast extends EventEmitter {
    * @returns {Promise<Packet>}
    */
   async _publish (packet, options = {}) {
-    if (!this._running) return;
+    await this.open();
 
     try {
       const ownerId = msgId(packet.seqno, this._id);
@@ -163,17 +132,13 @@ export class Broadcast extends EventEmitter {
       // Seen it by me.
       this._seenSeqs.add(ownerId);
 
-      await this._lookup();
-
       // Update the package to set the current sender..
       packet = Object.assign({}, packet, { from: this._id });
 
       const packetEncoded = this._codec.encode(packet);
 
       const waitFor = this._peers.map((peer) => {
-        if (!this._running) {
-          return;
-        }
+        if (!this.opened) return;
 
         // Don't send the message to the "origin" peer.
         if (packet.origin.equals(peer.id)) {
@@ -188,7 +153,9 @@ export class Broadcast extends EventEmitter {
         log('publish %h -> %h', this._id, peer.id, packet);
 
         this._seenSeqs.add(msgId(packet.seqno, peer.id));
-        return this._send(packetEncoded, peer, options).catch(err => {
+        return this._send(packetEncoded, peer, options).then(() => {
+          this.emit('send', packetEncoded, peer, options);
+        }).catch(err => {
           this.emit('send-error', err);
         });
       });
@@ -209,7 +176,7 @@ export class Broadcast extends EventEmitter {
    * @returns {(Packet|undefined)} Returns the packet if the decoding was successful.
    */
   _onPacket (packetEncoded) {
-    if (!this._running) return;
+    if (!this.opened) return;
 
     try {
       const packet = this._codec.decode(packetEncoded);
@@ -228,6 +195,10 @@ export class Broadcast extends EventEmitter {
       }
 
       const peer = this._peers.find(peer => peer.id.equals(packet.from));
+
+      if (!peer) {
+        throw new Error('peer not found');
+      }
 
       log('received %h -> %h', this._id, packet.from, packet);
 

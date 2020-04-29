@@ -54,33 +54,19 @@ $ npm install @dxos/broadcast
 import { Broadcast } from '@wirelineio/broadcast';
 
 const middleware = {
-  lookup: async () => {
-    // Return the list of neighbors peers with the format:
-    // [{ id: Buffer, ...extraArgs }, { id: Buffer, ...extraArgs }]
+  subscribe: ({ onData, onPeers }) => {
+    // Defines how to process incoming data and peers update.
+
+    // on('peers', onPeers)
+    // on('data', onData)
+    return () => {
+      // Return a dispose function.
+    }
   },
   send: async (packet, node) => {
     // Define how to send your packets.
     // "packet" is the encoded message to send.
     // "node" is the peer object generate from the lookup.
-
-    // e.g. If node is a stream
-    node.write(packet);
-
-    // e.g. If node is a websocket
-    node.send(packet);
-  },
-  subscribe: (onPacket) => {
-    // Defines how to process incoming packets.
-
-    // e.g. Using websockets
-
-    const onMessage = data => onPacket(data);
-    socket.on('message', onMessage);
-
-    // Return a dispose function.
-    return () => {
-      socket.off('message', onMessage);
-    }
   }
 };
 
@@ -91,11 +77,11 @@ const broadcast = new Broadcast(middleware, {
 })
 
 // We initialize the middleware and subscription inside the broadcast.
-broadcast.run()
+await broadcast.open()
 
 broadcast.publish(Buffer.from('Hello everyone'))
 
-broadcast.stop()
+await broadcast.close()
 ```
 
 You can check a real example in: [example](https://github.com/dxos/broadcast/tree/master/example)
@@ -105,12 +91,11 @@ You can check a real example in: [example](https://github.com/dxos/broadcast/tre
 #### `const broadcast = new Broadcast(middleware, [options])`
 
 - `middleware`: The middleware defines an interface to connect the broadcast to any request/response solution.
-  - `lookup: () => Promise<Array<Peer>>`: Runs a lookup to get the ids of your peers neighboors.
-    - `Peer: { id: Buffer, ...props }`
-  - `send: (packet: Buffer, peer: Object) => Promise`: Defines how to send the packet builded by the broadcast.
-  - `subscribe: (onPacket) => unsubscribeFunction`: Defines how to subscribe to incoming packets.
-    - `onPacket: (data: Buffer) => (Packet|undefined)`: Callback to process incoming data. It returns true if the broadcast could decode the message or false if not.
+  - `subscribe: ({ onData, onPeers }) => unsubscribeFunction`: Defines how to subscribe to incoming packets and peers update.
+    - `onData: (data: Buffer) => (Packet|undefined)`: Callback to process incoming data. It returns true if the broadcast could decode the message or false if not.
+    - `onPeers: (peers: [Peer])`: Callback to update the internal list of peers. A `Peer` object must follow the spec: `{ id: Buffer, ...props }`
     - `unsubscribeFunction: Function`: Defines a way to unsubscribe from listening messages if the broadcast stop working. Helpful if you are working with streams and event emitters.
+  - `send: (packet: Buffer, peer: Object) => Promise`: Defines how to send the packet builded by the broadcast.
 
 - `options`
   - `id: Buffer`: Defines an id for the current peer. Default: `crypto.randomBytes(32)`.

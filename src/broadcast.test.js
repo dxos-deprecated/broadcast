@@ -22,13 +22,22 @@ class Peer extends EventEmitter {
     this._messages = new Map();
 
     const middleware = {
-      lookup: async () => Array.from(this._peers.values()),
+      lookup: (updatePeers) => {
+
+      },
       send: async (packet, node, options) => {
         node.send(packet);
       },
-      subscribe: (onPacket) => {
-        this.on('message', onPacket);
-        return () => this.off('message', onPacket);
+      subscribe: ({ onData, onPeers }) => {
+        this.on('message', onData);
+
+        const onPeerAdded = () => onPeers(Array.from(this._peers.values()));
+        this.on('peer-added', onPeerAdded);
+
+        return () => {
+          this.off('message', onData);
+          this.off('peer-added', onPeerAdded);
+        };
       }
     };
 
@@ -42,7 +51,7 @@ class Peer extends EventEmitter {
       this.emit('packet', packet);
     });
 
-    this._broadcast.run();
+    this._broadcast.open();
   }
 
   get messages () {
@@ -59,14 +68,15 @@ class Peer extends EventEmitter {
 
   connect (peer) {
     this._peers.set(peer.id.toString('hex'), peer);
+    this.emit('peer-added', peer);
   }
 
   publish (message, options) {
     return this._broadcast.publish(message, options);
   }
 
-  stop () {
-    this._broadcast.stop();
+  close () {
+    this._broadcast.close();
   }
 }
 
@@ -101,7 +111,7 @@ test('balancedBinTree: broadcast a message through 63 peers.', async () => {
     expect(finish).toBe(true);
   }, 5000, 1000);
 
-  network.peers.forEach(peer => peer.stop());
+  network.peers.forEach(peer => peer.close());
 });
 
 test('complete: broadcast a message through 50 peers.', async () => {
@@ -129,5 +139,5 @@ test('complete: broadcast a message through 50 peers.', async () => {
 
   expect(network.peers.reduce((prev, next) => (prev && next.seenMessagesSize === 0), true)).toBeTruthy();
 
-  network.peers.forEach(peer => peer.stop());
+  network.peers.forEach(peer => peer.close());
 });
