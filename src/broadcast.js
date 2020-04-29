@@ -174,7 +174,10 @@ export class Broadcast extends EventEmitter {
         if (!this._running) return;
 
         // Don't send the message to the "origin" and/or "from" peer.
-        if (packet.origin.equals(peer.id) || packet.from.equals(peer.id)) return Promise.resolve();
+        if (packet.origin.equals(peer.id) || packet.from.equals(peer.id)) {
+          this._seenSeqs.add(msgId(packet.seqno, peer.id));
+          return Promise.resolve();
+        }
 
         // Don't send the message to neighbors that have already seen the message.
         if (this._seenSeqs.has(msgId(packet.seqno, peer.id))) return Promise.resolve();
