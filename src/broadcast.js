@@ -249,10 +249,6 @@ export class Broadcast extends NanoresourcePromise {
 
       const peer = this._peers.find(peer => peer.id.equals(packet.from));
 
-      if (!peer) {
-        throw new Error('peer not found');
-      }
-
       log('received %h -> %h', this._id, packet.from, packet);
 
       this.emit('packet', packet, peer);
