@@ -73,7 +73,7 @@ const middleware = {
 const broadcast = new Broadcast(middleware, {
   id: crypto.randomBytes(32),
   maxAge: 10 * 1000, // Timeout for each message in the LRU cache.
-  maxSize: 200 // Limit of messages in the LRU cache.
+  maxSize: 100 // Limit of messages in the LRU cache.
 })
 
 // We initialize the middleware and subscription inside the broadcast.
@@ -102,11 +102,11 @@ You can check a real example in: [example](https://github.com/dxos/broadcast/tre
   - `maxAge: number`: Defines the max live time for the cache messages. Default: `10 * 1000`.
   - `maxSize: number`: Defines the max size for the cache messages. Default: `100`.
 
-#### `broadcast.run()`
+#### `broadcast.open() => Promise`
 
 Initialize the cache and runs the defined subscription.
 
-#### `broadcast.stop()`
+#### `broadcast.close() => Promise`
 
 Clear the cache and unsubscribe from incoming messages.
 
