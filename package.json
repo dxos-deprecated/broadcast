@@ -38,6 +38,8 @@
   "dependencies": {
     "@dxos/codec-protobuf": "^1.1.0-beta.2",
     "debug": "^4.1.1",
+    "lru": "^3.1.0",
+    "nanoresource-promise": "^2.0.0",
     "source-map-support": "^0.5.12"
   },
   "devDependencies": {
