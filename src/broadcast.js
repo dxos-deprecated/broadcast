@@ -59,6 +59,7 @@ export class Broadcast extends NanoresourcePromise {
     const { id = crypto.randomBytes(32), maxAge = 10 * 1000, maxSize = 1000 } = options;
 
     this._id = id;
+
     this._send = (...args) => middleware.send(...args);
     this._subscribe = next => middleware.subscribe(next);
 
@@ -68,6 +69,11 @@ export class Broadcast extends NanoresourcePromise {
     this._codec
       .addJson(JSON.parse(schema))
       .build();
+
+    /** @deprecated */
+    if (middleware.lookup) {
+      this._lookup = () => middleware.lookup();
+    }
   }
 
   /**
@@ -113,23 +119,38 @@ export class Broadcast extends NanoresourcePromise {
   }
 
   /**
+   * Prune the internal cache items in timeout
+   */
+  pruneCache () {
+    for (const key of this._seenSeqs.keys) {
+      this._seenSeqs.peek(key);
+    }
+  }
+
+  /**
    * @deprecated
    */
   run () {
-    this.open().catch(() => {});
+    this.open().catch((err) => {
+      process.nextTick(() => this.emit('error', err));
+    });
   }
 
   /**
    * @deprecated
    */
   stop () {
-    this.close().catch(() => {});
+    this.close().catch((err) => {
+      process.nextTick(() => this.emit('error', err));
+    });
   }
 
   _open () {
     const onData = this._onPacket.bind(this);
     const onPeers = this.updatePeers.bind(this);
-    this._unsubscribe = this._subscribe({ onData, onPeers }) || (() => {});
+    // deprecated the use of lookup
+    const next = this._lookup ? onData : { onData, onPeers };
+    this._unsubscribe = this._subscribe(next) || (() => {});
 
     log('running %h', this._id);
   }
@@ -154,12 +175,15 @@ export class Broadcast extends NanoresourcePromise {
     try {
       const ownerId = msgId(packet.seqno, this._id);
 
-      if (this._seenSeqs.peek(ownerId)) {
+      if (this._seenSeqs.get(ownerId)) {
         return;
       }
 
       // Seen it by me.
       this._seenSeqs.set(ownerId, true);
+
+      /** @deprecated */
+      this._lookup && this.updatePeers(await this._lookup());
 
       // Update the package to set the current sender..
       packet = Object.assign({}, packet, { from: this._id });
@@ -175,7 +199,7 @@ export class Broadcast extends NanoresourcePromise {
         }
 
         // Don't send the message to neighbors that have already seen the message.
-        if (this._seenSeqs.peek(msgId(packet.seqno, peer.id))) {
+        if (this._seenSeqs.get(msgId(packet.seqno, peer.id))) {
           return Promise.resolve();
         }
 
@@ -219,7 +243,7 @@ export class Broadcast extends NanoresourcePromise {
       this._seenSeqs.set(msgId(packet.seqno, packet.from), true);
 
       // Check if I already see this packet.
-      if (this._seenSeqs.peek(msgId(packet.seqno, this._id))) {
+      if (this._seenSeqs.get(msgId(packet.seqno, this._id))) {
         return;
       }
 

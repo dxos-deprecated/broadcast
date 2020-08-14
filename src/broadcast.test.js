@@ -19,9 +19,6 @@ class Peer extends EventEmitter {
     this._messages = new Map();
 
     const middleware = {
-      lookup: (updatePeers) => {
-
-      },
       send: async (packet, node, options) => {
         node.send(packet);
       },
@@ -72,6 +69,10 @@ class Peer extends EventEmitter {
     return this._broadcast.publish(message, options);
   }
 
+  prune () {
+    return this._broadcast.pruneCache();
+  }
+
   close () {
     this._broadcast.close();
   }
@@ -110,7 +111,7 @@ test('balancedBinTree: broadcast a message through 63 peers.', async () => {
 
 test('complete: broadcast a message through 100 peers.', async () => {
   const generator = new NetworkGenerator({
-    createPeer: (id) => new Peer(id, { maxSize: 100 }),
+    createPeer: (id) => new Peer(id, { maxAge: 1000, maxSize: 100 }),
     createConnection: (peerFrom, peerTo) => {
       peerFrom.connect(peerTo);
       peerTo.connect(peerFrom);
@@ -119,6 +120,8 @@ test('complete: broadcast a message through 100 peers.', async () => {
 
   const network = generator.complete(50);
 
+  let time = Date.now();
+
   await publishAndSync(network.peers, Buffer.from('message1'));
   await publishAndSync(network.peers, Buffer.from('message1'));
   await publishAndSync(network.peers, Buffer.from('message1'));
@@ -126,6 +129,16 @@ test('complete: broadcast a message through 100 peers.', async () => {
   // The cache should have always the limit of 100
   expect(network.peers.reduce((prev, next) => {
     return prev && next.seenMessagesSize === 100;
+  }, true)).toBeTruthy();
+
+  time = Date.now() - time;
+  if (time < 2000) {
+    await new Promise(resolve => setTimeout(resolve, 2000 - time));
+  }
+
+  network.peers.forEach(peer => peer.prune());
+  expect(network.peers.reduce((prev, next) => {
+    return prev && next.seenMessagesSize === 0;
   }, true)).toBeTruthy();
 
   network.peers.forEach(peer => peer.close());
