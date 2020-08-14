@@ -54,7 +54,7 @@ $ npm install @dxos/broadcast
 import { Broadcast } from '@wirelineio/broadcast';
 
 const middleware = {
-  subscribe: ({ onData, onPeers }) => {
+  subscribe: (onData, updatePeers) => {
     // Defines how to process incoming data and peers update.
 
     // on('peers', onPeers)

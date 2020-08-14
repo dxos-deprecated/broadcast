@@ -22,10 +22,10 @@ class Peer extends EventEmitter {
       send: async (packet, node, options) => {
         node.send(packet);
       },
-      subscribe: ({ onData, onPeers }) => {
+      subscribe: (onData, updatePeers) => {
         this.on('message', onData);
 
-        const onPeerAdded = () => onPeers(Array.from(this._peers.values()));
+        const onPeerAdded = () => updatePeers(Array.from(this._peers.values()));
         this.on('peer-added', onPeerAdded);
 
         return () => {

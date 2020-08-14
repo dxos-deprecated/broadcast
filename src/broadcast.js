@@ -61,7 +61,7 @@ export class Broadcast extends NanoresourcePromise {
     this._id = id;
 
     this._send = (...args) => middleware.send(...args);
-    this._subscribe = next => middleware.subscribe(next);
+    this._subscribe = (...args) => middleware.subscribe(...args);
 
     this._seenSeqs = new LRU({ maxAge, max: maxSize });
     this._peers = [];
@@ -146,11 +146,7 @@ export class Broadcast extends NanoresourcePromise {
   }
 
   _open () {
-    const onData = this._onPacket.bind(this);
-    const onPeers = this.updatePeers.bind(this);
-    // deprecated the use of lookup
-    const next = this._lookup ? onData : { onData, onPeers };
-    this._unsubscribe = this._subscribe(next) || (() => {});
+    this._unsubscribe = this._subscribe(this._onPacket.bind(this), this.updatePeers.bind(this)) || (() => {});
 
     log('running %h', this._id);
   }
