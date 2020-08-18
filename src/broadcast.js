@@ -15,10 +15,9 @@ import schema from './schema.json';
 debug.formatters.h = v => v.toString('hex').slice(0, 6);
 const log = debug('broadcast');
 
-const msgId = (seqno, from) => {
-  assert(Buffer.isBuffer(seqno));
-  assert(Buffer.isBuffer(from));
-  return `${seqno.toString('hex')}:${from.toString('hex')}`;
+const packetIdGenerator = (seqno) => {
+  seqno = seqno.toString('hex');
+  return from => `${seqno}:${from.toString('hex')}`;
 };
 
 /**
@@ -30,7 +29,7 @@ const msgId = (seqno, from) => {
 /**
  * @typedef {Object} Packet
  * @property {Buffer} seqno Id message.
- * @property {Buffer} origin Represents the author's ID of the message. To identify a message (`msgId`) in the network you should check for the: `seqno + origin`.
+ * @property {Buffer} origin Represents the author's ID of the message. To identify a message in the network you should check for the: `seqno + origin`.
  * @property {Buffer} from Represents the current sender's ID of the message.
  * @property {Buffer} data Represents an opaque blob of data, it can contain any data that the publisher wants to send.
  */
@@ -84,14 +83,15 @@ export class Broadcast extends NanoresourcePromise {
    * @param {Buffer} [options.seqno=crypto.randomBytes(32)]
    * @returns {Promise<Packet>}
    */
-  async publish (data, options = {}) {
+  publish (data, options = {}) {
     const { seqno = crypto.randomBytes(32) } = options;
 
     assert(Buffer.isBuffer(data));
     assert(Buffer.isBuffer(seqno));
 
+    const getPacketId = packetIdGenerator(seqno);
     const packet = { seqno, origin: this._id, data };
-    return this._publish(packet, options);
+    return this._publish(packet, getPacketId(this._id), getPacketId);
   }
 
   /**
@@ -162,60 +162,46 @@ export class Broadcast extends NanoresourcePromise {
    * Publish and/or Forward a packet message to each peer neighboor.
    *
    * @param {Packet} packet
-   * @param {Object} options
+   * @param {String} ownerId
+   * @param {function} getPacketId
    * @returns {Promise<Packet>}
    */
-  async _publish (packet, options = {}) {
-    await this.open();
+  async _publish (packet, ownerId, getPacketId) {
+    await this._isOpen();
 
-    try {
-      const ownerId = msgId(packet.seqno, this._id);
+    // Seen it by me.
+    this._seenSeqs.set(ownerId, true);
 
-      if (this._seenSeqs.get(ownerId)) {
-        return;
-      }
+    /** @deprecated */
+    this._lookup && this.updatePeers(await this._lookup());
 
-      // Seen it by me.
-      this._seenSeqs.set(ownerId, true);
+    // Update the package to set the current sender..
+    packet = Object.assign({}, packet, {
+      from: this._id
+    });
 
-      /** @deprecated */
-      this._lookup && this.updatePeers(await this._lookup());
+    const packetEncoded = this._codec.encode(packet);
 
-      // Update the package to set the current sender..
-      packet = Object.assign({}, packet, { from: this._id });
+    this._peers.forEach(peer => {
+      // Don't send the message to the "origin" peer.
+      if (packet.origin.equals(peer.id)) return;
 
-      const packetEncoded = this._codec.encode(packet);
+      const packetId = getPacketId(peer.id);
 
-      const waitFor = this._peers.map((peer) => {
-        if (!this.opened) return;
+      // Don't send the message to neighbors that have already seen the message.
+      if (this._seenSeqs.get(packetId)) return;
+      this._seenSeqs.set(packetId, true);
 
-        // Don't send the message to the "origin" peer.
-        if (packet.origin.equals(peer.id)) {
-          return Promise.resolve();
-        }
+      log('publish %h -> %h', this._id, peer.id, packet);
 
-        // Don't send the message to neighbors that have already seen the message.
-        if (this._seenSeqs.get(msgId(packet.seqno, peer.id))) {
-          return Promise.resolve();
-        }
-
-        log('publish %h -> %h', this._id, peer.id, packet);
-
-        this._seenSeqs.set(msgId(packet.seqno, peer.id), true);
-        return this._send(packetEncoded, peer, options).then(() => {
-          this.emit('send', packetEncoded, peer, options);
-        }).catch(err => {
-          this.emit('send-error', err);
-        });
+      this._send(packetEncoded, peer).then(() => {
+        this.emit('send', packetEncoded, peer);
+      }).catch(err => {
+        this.emit('send-error', err);
       });
+    });
 
-      await Promise.all(waitFor);
-
-      return packet;
-    } catch (err) {
-      this.emit('send-error', err);
-      throw err;
-    }
+    return packet;
   }
 
   /**
@@ -225,35 +211,37 @@ export class Broadcast extends NanoresourcePromise {
    * @returns {(Packet|undefined)} Returns the packet if the decoding was successful.
    */
   _onPacket (packetEncoded) {
-    if (!this.opened) return;
+    if (!this.opened || this.closed || this.closing) return;
 
     try {
       const packet = this._codec.decode(packetEncoded);
 
       // Ignore packets produced by me and forwarded by others
-      if (packet.origin.equals(this._id)) {
-        return;
-      }
+      if (packet.origin.equals(this._id)) return;
+
+      const getPacketId = packetIdGenerator(packet.seqno);
 
       // Cache the packet as "seen by the peer from".
-      this._seenSeqs.set(msgId(packet.seqno, packet.from), true);
+      this._seenSeqs.set(getPacketId(packet.from), true);
 
       // Check if I already see this packet.
-      if (this._seenSeqs.get(msgId(packet.seqno, this._id))) {
-        return;
-      }
-
-      const peer = this._peers.find(peer => peer.id.equals(packet.from));
+      const ownerId = getPacketId(this._id);
+      if (this._seenSeqs.get(ownerId)) return;
 
       log('received %h -> %h', this._id, packet.from, packet);
 
-      this.emit('packet', packet, peer);
+      this.emit('packet', packet);
 
-      this._publish(packet).catch(() => {});
+      this._publish(packet, ownerId, getPacketId).catch(() => {});
 
       return packet;
     } catch (err) {
       this.emit('subscribe-error', err);
     }
+  }
+
+  _isOpen () {
+    if (this.opening) return this.open();
+    if (!this.opened || this.closed || this.closing) throw new Error('broadcast closed');
   }
 }

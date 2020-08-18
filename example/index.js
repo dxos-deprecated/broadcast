@@ -27,7 +27,7 @@ let packetsReaded = 0;
 
 const addPeer = () => {
   const peer = _addPeer(graph, TOPIC, {
-    bootstrap: ['https://signal.wireline.ninja']
+    bootstrap: ['http://localhost:4000']
   });
 
   const middleware = {
@@ -147,7 +147,6 @@ graph.on('changed', (changes) => {
     links: [...oldLinks, ...newLinks]
   });
 });
-
 
 for (let i = 0; i < MAX_PEERS; i++) {
   addPeer();

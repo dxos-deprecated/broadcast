@@ -47,6 +47,7 @@
     "@babel/core": "^7.4.5",
     "@babel/plugin-proposal-export-default-from": "^7.5.2",
     "@babel/preset-env": "^7.4.5",
+    "@dxos/benchmark-suite": "^1.0.0-beta.3",
     "@dxos/network-generator": "^0.0.1",
     "babel-eslint": "^10.0.2",
     "babel-jest": "^24.8.0",
