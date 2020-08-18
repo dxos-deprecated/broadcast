@@ -110,5 +110,5 @@ class Peer extends EventEmitter {
     }
   });
 
-  console.log(suite.print(await suite.run()));
+  suite.print(await suite.run());
 })();

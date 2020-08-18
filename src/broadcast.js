@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { Codec } from '@dxos/codec-protobuf';
 import debug from 'debug';
 import { NanoresourcePromise } from 'nanoresource-promise/emitter';
-import LRU from 'lru';
+import LRU from 'tiny-lru';
 
 // eslint-disable-next-line
 import schema from './schema.json';
@@ -62,7 +62,7 @@ export class Broadcast extends NanoresourcePromise {
     this._send = (...args) => middleware.send(...args);
     this._subscribe = (...args) => middleware.subscribe(...args);
 
-    this._seenSeqs = new LRU({ maxAge, max: maxSize });
+    this._seenSeqs = LRU(maxSize, maxAge);
     this._peers = [];
     this._codec = new Codec('dxos.broadcast.Packet');
     this._codec
@@ -110,7 +110,7 @@ export class Broadcast extends NanoresourcePromise {
    */
   updateCache (opts = {}) {
     if (opts.maxAge) {
-      this._seenSeqs.maxAge = opts.maxAge;
+      this._seenSeqs.ttl = opts.maxAge;
     }
 
     if (opts.maxSize) {
@@ -122,8 +122,11 @@ export class Broadcast extends NanoresourcePromise {
    * Prune the internal cache items in timeout
    */
   pruneCache () {
-    for (const key of this._seenSeqs.keys) {
-      this._seenSeqs.peek(key);
+    const time = Date.now();
+    for (const item of Object.values(this._seenSeqs.items)) {
+      if (this._seenSeqs.ttl > 0 && item.expiry <= time) {
+        this._seenSeqs.delete(item.key);
+      }
     }
   }
 
@@ -170,10 +173,10 @@ export class Broadcast extends NanoresourcePromise {
     await this._isOpen();
 
     // Seen it by me.
-    this._seenSeqs.set(ownerId, true);
+    this._seenSeqs.set(ownerId, 1);
 
     /** @deprecated */
-    this._lookup && this.updatePeers(await this._lookup());
+    this._lookup && this.updatePeers(this._lookup());
 
     // Update the package to set the current sender..
     packet = Object.assign({}, packet, {
@@ -190,7 +193,7 @@ export class Broadcast extends NanoresourcePromise {
 
       // Don't send the message to neighbors that have already seen the message.
       if (this._seenSeqs.get(packetId)) return;
-      this._seenSeqs.set(packetId, true);
+      this._seenSeqs.set(packetId, 1);
 
       log('publish %h -> %h', this._id, peer.id, packet);
 
@@ -222,7 +225,7 @@ export class Broadcast extends NanoresourcePromise {
       const getPacketId = packetIdGenerator(packet.seqno);
 
       // Cache the packet as "seen by the peer from".
-      this._seenSeqs.set(getPacketId(packet.from), true);
+      this._seenSeqs.set(getPacketId(packet.from), 1);
 
       // Check if I already see this packet.
       const ownerId = getPacketId(this._id);

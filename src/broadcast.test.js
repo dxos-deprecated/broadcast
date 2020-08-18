@@ -53,7 +53,7 @@ class Peer extends EventEmitter {
   }
 
   get seenMessagesSize () {
-    return this._broadcast._seenSeqs.length;
+    return this._broadcast._seenSeqs.size;
   }
 
   send (message) {
