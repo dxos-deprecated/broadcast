@@ -88,11 +88,12 @@ class Peer extends EventEmitter {
   suite.test('direct', async () => {
     const peer = network.peers[1];
     for (let i = 0; i < 10000; i++) {
-      const done = new Promise(resolve => peer.once('message', msg => {
+      const done = new Promise(resolve => peer.once('direct', msg => {
         peer.codec.decode(msg);
         resolve();
       }));
-      await peer.send(peer.codec.encode({
+
+      peer.emit('direct', peer.codec.encode({
         seqno: crypto.randomBytes(32),
         origin: peer.id,
         from: peer.id,

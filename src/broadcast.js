@@ -15,11 +15,6 @@ import schema from './schema.json';
 debug.formatters.h = v => v.toString('hex').slice(0, 6);
 const log = debug('broadcast');
 
-const packetIdGenerator = (seqno) => {
-  seqno = seqno.toString('hex');
-  return from => `${seqno}:${from.toString('hex')}`;
-};
-
 /**
  * @typedef {Object} Middleware
  * @property {Function} send Defines how to send the packet builded by the broadcast.
@@ -89,9 +84,8 @@ export class Broadcast extends NanoresourcePromise {
     assert(Buffer.isBuffer(data));
     assert(Buffer.isBuffer(seqno));
 
-    const getPacketId = packetIdGenerator(seqno);
     const packet = { seqno, origin: this._id, data };
-    return this._publish(packet, getPacketId(this._id), getPacketId);
+    return this._publish(packet);
   }
 
   /**
@@ -165,18 +159,17 @@ export class Broadcast extends NanoresourcePromise {
    * Publish and/or Forward a packet message to each peer neighboor.
    *
    * @param {Packet} packet
-   * @param {String} ownerId
-   * @param {function} getPacketId
+   * @param {Object} options
    * @returns {Promise<Packet>}
    */
-  async _publish (packet, ownerId, getPacketId) {
+  async _publish (packet, options = {}) {
     await this._isOpen();
 
-    // Seen it by me.
-    this._seenSeqs.set(ownerId, 1);
-
     /** @deprecated */
-    this._lookup && this.updatePeers(this._lookup());
+    this._lookup && this.updatePeers(await this._lookup());
+
+    const peers = this._peers.filter(peer => (!packet.origin.equals(peer.id) && (!packet.from || !packet.from.equals(peer.id))));
+    if (peers.length === 0) return;
 
     // Update the package to set the current sender..
     packet = Object.assign({}, packet, {
@@ -185,24 +178,15 @@ export class Broadcast extends NanoresourcePromise {
 
     const packetEncoded = this._codec.encode(packet);
 
-    this._peers.forEach(peer => {
-      // Don't send the message to the "origin" peer.
-      if (packet.origin.equals(peer.id)) return;
-
-      const packetId = getPacketId(peer.id);
-
-      // Don't send the message to neighbors that have already seen the message.
-      if (this._seenSeqs.get(packetId)) return;
-      this._seenSeqs.set(packetId, 1);
-
+    await Promise.all(peers.map(peer => {
       log('publish %h -> %h', this._id, peer.id, packet);
 
-      this._send(packetEncoded, peer).then(() => {
+      return this._send(packetEncoded, peer, options).then(() => {
         this.emit('send', packetEncoded, peer);
       }).catch(err => {
         this.emit('send-error', err);
       });
-    });
+    }));
 
     return packet;
   }
@@ -222,21 +206,17 @@ export class Broadcast extends NanoresourcePromise {
       // Ignore packets produced by me and forwarded by others
       if (packet.origin.equals(this._id)) return;
 
-      const getPacketId = packetIdGenerator(packet.seqno);
-
-      // Cache the packet as "seen by the peer from".
-      this._seenSeqs.set(getPacketId(packet.from), 1);
+      const packetId = packet.origin.toString('hex') + ':' + packet.seqno.toString('hex');
 
       // Check if I already see this packet.
-      const ownerId = getPacketId(this._id);
-      if (this._seenSeqs.get(ownerId)) return;
+      if (this._seenSeqs.get(packetId)) return;
+      this._seenSeqs.set(packetId, 1);
 
       log('received %h -> %h', this._id, packet.from, packet);
 
+      this._publish(packet).catch(() => {});
+
       this.emit('packet', packet);
-
-      this._publish(packet, ownerId, getPacketId).catch(() => {});
-
       return packet;
     } catch (err) {
       this.emit('subscribe-error', err);

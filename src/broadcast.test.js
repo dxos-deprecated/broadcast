@@ -91,7 +91,7 @@ async function publishAndSync (peers, message, opts) {
   return packet;
 }
 
-test('balancedBinTree: broadcast a message through 63 peers.', async () => {
+test('balancedBinTree: broadcast a message.', async () => {
   const generator = new NetworkGenerator({
     createPeer: (id) => new Peer(id),
     createConnection: (peerFrom, peerTo) => {
@@ -109,16 +109,16 @@ test('balancedBinTree: broadcast a message through 63 peers.', async () => {
   network.peers.forEach(peer => peer.close());
 });
 
-test('complete: broadcast a message through 100 peers.', async () => {
+test('complete: broadcast a message.', async () => {
   const generator = new NetworkGenerator({
-    createPeer: (id) => new Peer(id, { maxAge: 1000, maxSize: 100 }),
+    createPeer: (id) => new Peer(id, { maxAge: 1000, maxSize: 2 }),
     createConnection: (peerFrom, peerTo) => {
       peerFrom.connect(peerTo);
       peerTo.connect(peerFrom);
     }
   });
 
-  const network = generator.complete(50);
+  const network = generator.complete(10);
 
   let time = Date.now();
 
@@ -127,8 +127,8 @@ test('complete: broadcast a message through 100 peers.', async () => {
   await publishAndSync(network.peers, Buffer.from('message1'));
 
   // The cache should have always the limit of 100
-  expect(network.peers.reduce((prev, next) => {
-    return prev && next.seenMessagesSize === 100;
+  expect(network.peers.slice(1).reduce((prev, next) => {
+    return prev && next.seenMessagesSize === 2;
   }, true)).toBeTruthy();
 
   time = Date.now() - time;
