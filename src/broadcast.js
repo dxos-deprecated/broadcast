@@ -202,6 +202,7 @@ export class Broadcast extends NanoresourcePromise {
 
     try {
       const packet = this._codec.decode(packetEncoded);
+      if (!packet || !packet.seqno || !packet.origin || !packet.from) return;
 
       // Ignore packets produced by me and forwarded by others
       if (packet.origin.equals(this._id)) return;
