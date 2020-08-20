@@ -35,7 +35,8 @@ class Peer extends EventEmitter {
     };
 
     this._broadcast = new Broadcast(middleware, {
-      id: this.id
+      id: this.id,
+      maxSize: Number.MAX_SAFE_INTEGER
     });
 
     this._broadcast.on('packet', (packet) => {
@@ -83,10 +84,12 @@ class Peer extends EventEmitter {
     }
   });
 
-  const network = generator.complete(2);
+  const direct = generator.complete(2);
+  const watz = generator.wattsStrogatz(15, 10, 0);
+  const tree = generator.balancedBinTree(3);
 
-  suite.test('direct', async () => {
-    const peer = network.peers[1];
+  suite.test('10000 requests: direct (2 nodes)', async () => {
+    const peer = direct.peers[1];
     for (let i = 0; i < 10000; i++) {
       const done = new Promise(resolve => peer.once('direct', msg => {
         peer.codec.decode(msg);
@@ -103,10 +106,26 @@ class Peer extends EventEmitter {
     }
   });
 
-  suite.test('broadcast', async () => {
+  suite.test('10000 requests: broadcast direct (2 nodes)', async () => {
     for (let i = 0; i < 10000; i++) {
-      const done = new Promise(resolve => network.peers[1].once('packet', resolve));
-      await network.peers[0].publish(Buffer.from('test'));
+      const done = new Promise(resolve => direct.peers[1].once('packet', resolve));
+      await direct.peers[0].publish(Buffer.from('test'));
+      await done;
+    }
+  });
+
+  suite.test('10000 requests: broadcast watz of 15 nodes with 10 connections x peer', async () => {
+    for (let i = 0; i < 10000; i++) {
+      const done = Promise.all(watz.peers.slice(1).map(peer => new Promise(resolve => peer.once('packet', resolve))));
+      await watz.peers[0].publish(Buffer.from('test'));
+      await done;
+    }
+  });
+
+  suite.test('10000 requests: broadcast tree of 15 nodes', async () => {
+    for (let i = 0; i < 10000; i++) {
+      const done = Promise.all(tree.peers.slice(1).map(peer => new Promise(resolve => peer.once('packet', resolve))));
+      await tree.peers[0].publish(Buffer.from('test'));
       await done;
     }
   });
